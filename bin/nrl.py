@@ -6,6 +6,9 @@ def finder(bedfile,out_format="maxes",offset=75,freq_cutoff=40,count_thr=10):
     '''
     The finder functon reads in a .bed file, extracts read lengths and computes NRLs from a filtered histogram of read lengths.
     
+    Dependencies:
+        numpy, scipy, matplotlib
+    
     Recommended usage:
         nrls = finder("path/to/bedfile.bed")
     
