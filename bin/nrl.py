@@ -10,7 +10,7 @@ def finder(bedfile,out_format="maxes",offset=75,freq_cutoff=40,count_thr=10):
         numpy, scipy, matplotlib
     
     Recommended usage:
-        nrls = finder("path/to/bedfile.bed")
+        nrls = nrl.finder("path/to/bedfile.bed")
     
     Required Args:
         bedfile: string denoting filepath to desired .bed file, e.g. "./demo/wt.bed"
@@ -76,7 +76,7 @@ def hunt_nrls(lengths,offset,freq_cutoff,count_thr):
     bin_edges_tf=bin_edges[offset:] # Bin edges to filter
     
     # Generate and implement Butterworth filter
-    b,a=signal.butter(6,freq_cutoff/1000) # Polynomials of IIR filter
+    b,a=signal.butter(6,freq_cutoff*1.0/1000) # Polynomials of IIR filter (force floating point for Python 2 compatibility)
     counts_f=signal.filtfilt(b,a,counts_tf) # Filtered counts
     bin_edges_f=bin_edges_tf # Book-keeping: 
     

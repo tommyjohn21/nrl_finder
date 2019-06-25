@@ -102,9 +102,10 @@ fi
 #########################
 ### Callout to python ###
 #########################
-# Use the above parameters
-# Output data in tab-delimited format
-output=$(python -c "import bin.nrl as nrl; print(nrl.finder(\"$bedfile\",\"$out_format\",$offset,$freq_cutoff,$count_thr))")
+# Detemine link to bin directory
+nrl_finder_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+# Use the above parameters to: 1. add bin to PYTHONPATH, 2. call nrl.finder and 3. print output
+output=$(python -c "import sys; sys.path.append(\"$nrl_finder_path\"); import bin.nrl as nrl; print(nrl.finder(\"$bedfile\",\"$out_format\",$offset,$freq_cutoff,$count_thr))")
 
 #####################
 ### Format output ###
