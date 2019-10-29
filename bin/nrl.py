@@ -33,7 +33,7 @@ def finder(bedfile,out_format="maxes",offset=75,freq_cutoff=40,count_thr=10):
     # Extract read lengths
     lengths=read_bed(bedfile)
     # Extract quantities of interest (nrls/maxes, mins, auc, etc)
-    output=hunt_nrls(lengths,offset,freq_cutoff,count_thr)
+    output=hunt_nrls(bedfile,lengths,offset,freq_cutoff,count_thr)
     # Construct plot
     output=construct_plot(bedfile,output)
     # Format output for returning and return it
@@ -60,7 +60,7 @@ def read_bed(bedfile):
     # Output lengths
     return lengths
 
-def hunt_nrls(lengths,offset,freq_cutoff,count_thr):
+def hunt_nrls(bedfile,lengths,offset,freq_cutoff,count_thr):
     '''
     Hunt_nrls computes a histogram of read lengths and low-pass filters a piece of that histogram (excluding offset) with a 6th-order Butterworth filter at the frequency defined by freq_cutoff. Extrema (minima and maxima) are then extracted, excluding those whose count number falls below a pre-defined threshold (given by count_thr).
     '''
@@ -87,16 +87,15 @@ def hunt_nrls(lengths,offset,freq_cutoff,count_thr):
     sdt=ddcounts[crt_pt-2] # Second derivative test
     crt_pt=crt_pt+offset # Book-keeping: index critical points to include offset
     
-    # Extract extrema, area under the curve
+    # Extract extrema
     maxes=crt_pt[sdt<0] # Local maxima by second derivative test
     mins=crt_pt[sdt>0] # Local minima by second derivative test
-    auc=np.sum(counts[mins[0]:]) # Area under the curve
 
     # Use only mins/maxes that have an adequate number of counts
     maxes=maxes[counts[maxes]>count_thr]
     mins=mins[counts[mins]>count_thr]
 
-    # Organize outputs into dictionary and return
+    # Organize outputs into dictionary
     output=dict()
     output["bin_edges"]=bin_edges
     output["counts"]=counts
@@ -104,7 +103,19 @@ def hunt_nrls(lengths,offset,freq_cutoff,count_thr):
     output["counts_f"]=counts_f
     output["maxes"]=maxes
     output["mins"]=mins
-    output["auc"]=auc
+
+    # Try to compute area under the curve, add to output
+    if maxes.size==0 or mins.size==0:
+        # No extrema were found, suggesting a monotonic function
+        output["auc"]=None # Do not compute area under curve
+        construct_plot(bedfile,output) # Instead, construct plot to show user
+        output=format_output(bedfile,"figure",output) # Return constructed plot
+        raise ValueError("No local {} were identified, see generated plot".format(("minima","maxima")[maxes.size==0]))
+    else:
+        auc=np.sum(counts[mins[0]:]) # Area under the curve
+        output["auc"]=auc
+
+    # Return output
     return output
     
 def construct_plot(bedfile,output):
@@ -115,14 +126,19 @@ def construct_plot(bedfile,output):
     f=plt.figure() # Initialize figure
     
     # Baseline plot images
-    plt.fill_between(output["bin_edges"][output["mins"][0]:],output["counts"][output["mins"][0]:],color="#a8a8a8") # Plot AUC region
+    
+    # Plot area under curve if it exists
+    if output["auc"] is not None:
+        plt.fill_between(output["bin_edges"][output["mins"][0]:],output["counts"][output["mins"][0]:],color="#a8a8a8") # Plot AUC region
+
     plt.semilogy(output["bin_edges"],output["counts"],"k") # Plot counted histogram data
     plt.semilogy(output["bin_edges_f"],output["counts_f"],color="#d62728") # Plot filtered histogram data
     
-    # Plot extrema
-    find = lambda x,y=output["bin_edges_f"]: np.where(y==x)[0].tolist()[0] # Book-keeping: lambda to convert indices from non-filtered to filtered data
-    plt.semilogy(output["bin_edges"][output["maxes"]],output["counts_f"][np.array(list(map(find,output["maxes"].tolist())))],"o",color="#1f77b4") # Maxes
-    plt.semilogy(output["bin_edges"][output["mins"]],output["counts_f"][np.array(list(map(find,output["mins"].tolist())))],"o",color="#8F2EFF") # Mins
+    # Plot extrema, if they exist
+    if output["maxes"].size>0 and output["mins"].size>0:
+        find = lambda x,y=output["bin_edges_f"]: np.where(y==x)[0].tolist()[0] # Book-keeping: lambda to convert indices from non-filtered to filtered data
+        plt.semilogy(output["bin_edges"][output["maxes"]],output["counts_f"][np.array(list(map(find,output["maxes"].tolist())))],"o",color="#1f77b4") # Maxes
+        plt.semilogy(output["bin_edges"][output["mins"]],output["counts_f"][np.array(list(map(find,output["mins"].tolist())))],"o",color="#8F2EFF") # Mins
 
     # Adjust axes for viewability
     plt.xlim(0,round(output["bin_edges"][np.where(output["counts_f"]>1)[0][-1]]*1.1)) # Adjust x-axis for scaling

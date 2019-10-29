@@ -24,7 +24,7 @@ $ git clone https://github.com/tommyjohn21/nrl_finder.git
 2. Add nrl_finder utility to command line path
 
 ```
-$ export PATH="$PATH:/path/to/nrl_finder"
+$ export PATH=$PATH:/path/to/nrl_finder
 ```
 
 Alternatively, the bin/nrl.py utility can be imported into Python:
